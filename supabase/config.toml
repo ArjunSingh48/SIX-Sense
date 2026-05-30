@@ -1,0 +1,4 @@
+project_id = "htfcknnnekpjeaiarfti"
+
+[functions.sense-ai]
+verify_jwt = false
