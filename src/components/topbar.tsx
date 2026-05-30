@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
-export function Topbar({ role = "Compliance Officer", user = "Elena Vogel" }: { role?: string; user?: string }) {
+export function Topbar({ role = "Compliance Officer", user = "Arjun Singh" }: { role?: string; user?: string }) {
   return (
     <header className="h-14 border-b bg-card/80 backdrop-blur sticky top-0 z-30 flex items-center gap-3 px-4">
       <SidebarTrigger />

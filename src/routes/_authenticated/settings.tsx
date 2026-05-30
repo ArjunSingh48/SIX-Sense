@@ -11,7 +11,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
         <Card className="shadow-card">
           <CardHeader><CardTitle className="text-base">Your role</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Name</span><span>Elena Vogel</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Name</span><span>Arjun Singh</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Role</span><Badge variant="secondary" className="font-normal">Compliance Officer</Badge></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Department</span><span>Compliance</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Access</span><span>Public · Department · Restricted</span></div>

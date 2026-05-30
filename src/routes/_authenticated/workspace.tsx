@@ -75,7 +75,7 @@ const dms = [
 
 const seedMessages: Msg[] = [
   {
-    id: "m1", channelId: "general", author: "Elena Vogel", avatarColor: "bg-violet-500",
+    id: "m1", channelId: "general", author: "Arjun Singh", avatarColor: "bg-violet-500",
     ts: "10:14 AM",
     body: (
       <>
