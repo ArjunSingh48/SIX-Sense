@@ -206,6 +206,21 @@ Include: What changed in active projects, Decisions made, New documents, Tickets
 Include: Delivery metrics (tasks closed, on-time %, avg progress), Knowledge contributions (docs ingested, questions answered), Project highlights, Risks, Suggested next-quarter goals.`,
     dashboard: `Generate a STAKEHOLDER DASHBOARD summary for managers and C-level.
 Include: Department health, Project portfolio status with %, Knowledge gaps detected, SME dependence risks, Top recommendations.`,
+    offboarding: `Generate a comprehensive OFFBOARDING / KNOWLEDGE-TRANSFER document for ${params.employee ?? "the employee"} who is leaving the company (last day: ${params.lastDay ?? "TBD"}).
+This document MUST capture EVERYTHING the successor needs to continue the work seamlessly. Be exhaustive and specific — this is the employee's full memory dump.
+Include sections:
+- Role & scope (what they own end-to-end)
+- Active projects with CURRENT STATUS, % complete, next milestone, and what is blocking each one
+- Every Jira ticket they own with status, progress %, and the exact next action
+- Decisions made and the rationale (so the successor doesn't reopen settled questions)
+- In-flight commitments to clients, regulators, internal stakeholders (with dates)
+- Recurring meetings, cadences, and who attends
+- Key relationships (SMEs, vendors, regulators) with context on how to work with each
+- Systems, credentials scope (no secrets), dashboards, runbooks
+- Known risks, landmines and 'things only I know'
+- Open questions the successor should ask in week 1
+- A FAQ block: list 8-12 likely questions a new person will ask, each with a complete answer drawn from the context
+Make the FAQ rich — the new joiner will literally use SIX Sense to ask these questions.`,
   };
 
   const system = `You are SIX Sense, a governed enterprise knowledge assistant. Produce a structured executive-quality document. Return strict JSON:

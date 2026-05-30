@@ -135,8 +135,14 @@ function WorkspacePage() {
   const [twinActive, setTwinActive] = useState(false);
   const [twinPanelOpen, setTwinPanelOpen] = useState(false);
 
-  // Settings
+  // Settings & overlays
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState<string | null>(null); // employee id or "me"
+  const [dmOpen, setDmOpen] = useState<string | null>(null);
+  const [railSheet, setRailSheet] = useState<null | "dms" | "activity" | "files">(null);
+
+  // Main channel tabs
+  const [mainTab, setMainTab] = useState<"messages" | "canvas" | "files" | "bookmarks">("messages");
 
   const active = channels.find((c) => c.id === activeId)!;
   const channelMessages = useMemo(() => messages.filter((m) => m.channelId === activeId), [messages, activeId]);
@@ -217,15 +223,15 @@ function WorkspacePage() {
           SIX
         </div>
         <RailItem icon={<Home className="size-5" />} label="Home" active />
-        <RailItem icon={<MessageSquare className="size-5" />} label="DMs" />
-        <RailItem icon={<Activity className="size-5" />} label="Activity" />
-        <RailItem icon={<FileText className="size-5" />} label="Files" />
+        <RailItem icon={<MessageSquare className="size-5" />} label="DMs" onClick={() => setRailSheet("dms")} />
+        <RailItem icon={<Activity className="size-5" />} label="Activity" onClick={() => setRailSheet("activity")} />
+        <RailItem icon={<FileText className="size-5" />} label="Files" onClick={() => setRailSheet("files")} />
         <RailItem icon={<MoreHorizontal className="size-5" />} label="More" />
         <div className="mt-auto mb-3 flex flex-col items-center gap-2">
           <button onClick={() => setPlusOpen(true)} className="size-9 rounded-full bg-white/10 hover:bg-white/20 grid place-items-center transition" title="New">
             <Plus className="size-4" />
           </button>
-          <div className="size-8 rounded-full bg-emerald-500 grid place-items-center text-xs font-semibold text-black">AS</div>
+          <button onClick={() => setProfileOpen("me")} className="size-8 rounded-full bg-emerald-500 grid place-items-center text-xs font-semibold text-black hover:ring-2 hover:ring-white/30 transition" title="Your profile">AS</button>
         </div>
       </nav>
 
@@ -301,7 +307,7 @@ function WorkspacePage() {
             <Plus className="size-3 hover:text-white cursor-pointer" />
           </div>
           {dms.map((d) => (
-            <button key={d.id} className="w-full flex items-center gap-2 px-4 py-1 hover:bg-white/5 text-left">
+            <button key={d.id} onClick={() => d.id === "self" ? setProfileOpen("me") : setDmOpen(d.id)} className="w-full flex items-center gap-2 px-4 py-1 hover:bg-white/5 text-left">
               <span className={`size-3.5 rounded-sm ${d.color}`} />
               <span className="text-[14px] text-white/85 truncate">{d.name}</span>
               {d.role === "you" && <span className="text-[11px] text-white/50">you</span>}
@@ -344,21 +350,26 @@ function WorkspacePage() {
 
         {/* Tabs row */}
         <div className="h-9 border-b border-white/5 px-5 flex items-center gap-5 text-[13px]">
-          <TabPill active icon={<MessageSquare className="size-3.5" />} label="Messages" />
-          <TabPill icon={<FileText className="size-3.5" />} label="Canvas" />
-          <TabPill icon={<FileText className="size-3.5" />} label="Files" />
-          <TabPill icon={<Bookmark className="size-3.5" />} label="Bookmarks" />
+          <TabPill active={mainTab === "messages"} onClick={() => setMainTab("messages")} icon={<MessageSquare className="size-3.5" />} label="Messages" />
+          <TabPill active={mainTab === "canvas"} onClick={() => setMainTab("canvas")} icon={<Layout className="size-3.5" />} label="Canvas" />
+          <TabPill active={mainTab === "files"} onClick={() => setMainTab("files")} icon={<FileText className="size-3.5" />} label="Files" />
+          <TabPill active={mainTab === "bookmarks"} onClick={() => setMainTab("bookmarks")} icon={<Bookmark className="size-3.5" />} label="Bookmarks" />
           <Plus className="size-3.5 text-white/50 cursor-pointer" />
         </div>
 
-        {/* Messages */}
+        {/* Main content per tab */}
         <ScrollArea className="flex-1">
-          <div className="px-5 py-5 space-y-5">
-            {channelMessages.map((m) => (
-              <MessageBlock key={m.id} m={m} />
-            ))}
-            <DayDivider label="Today" />
-          </div>
+          {mainTab === "messages" && (
+            <div className="px-5 py-5 space-y-5">
+              {channelMessages.map((m) => (
+                <MessageBlock key={m.id} m={m} />
+              ))}
+              <DayDivider label="Today" />
+            </div>
+          )}
+          {mainTab === "canvas" && <CanvasView channelName={active.name} />}
+          {mainTab === "files" && <FilesView channelName={active.name} />}
+          {mainTab === "bookmarks" && <BookmarksView channelName={active.name} />}
         </ScrollArea>
 
         {/* Composer */}
@@ -417,23 +428,29 @@ function WorkspacePage() {
 
       {/* PLUS MENU (composer add) */}
       <Dialog open={plusOpen} onOpenChange={setPlusOpen}>
-        <DialogContent className="p-0 max-w-xs bg-[#1a1d29] border-white/10 text-white">
-          <div className="py-2">
-            {/* SIX Sense first — highlighted */}
-            <PlusItem
-              onClick={openSixSense}
-              icon={
-                <div className={`size-5 rounded grid place-items-center relative ${twinActive ? "bg-gradient-to-br from-emerald-400 to-emerald-600" : "bg-gradient-to-br from-amber-400 to-orange-500"}`}>
-                  <Sparkles className="size-3 text-black" />
-                  {twinActive && <span className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-emerald-300 ring-1 ring-[#1a1d29]" />}
+        <DialogContent className="p-0 max-w-sm bg-[#1a1d29] border-white/10 text-white gap-0">
+          {/* SIX Sense featured card — full width, X button does not overlap content */}
+          <button
+            onClick={openSixSense}
+            className="relative w-full text-left p-4 bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-violet-500/20 hover:from-amber-500/25 hover:to-violet-500/25 transition border-b border-white/10 rounded-t-lg"
+          >
+            <div className="flex items-center gap-3 pr-8">
+              <div className={`size-10 rounded-lg grid place-items-center shrink-0 shadow-lg ${twinActive ? "bg-gradient-to-br from-emerald-400 to-emerald-600" : "bg-gradient-to-br from-amber-400 to-orange-500"}`}>
+                <Sparkles className="size-5 text-black" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="font-bold text-sm">SIX Sense</p>
+                  {twinActive && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300">Active</span>}
                 </div>
-              }
-              label="SIX Sense"
-              hint={twinActive ? "Active" : "Open your Digital Twin"}
-              accent
-            />
+                <p className="text-[11px] text-white/70 mt-0.5 leading-snug">
+                  Your governed Digital Twin · ask, upload knowledge, track progress
+                </p>
+              </div>
+            </div>
+          </button>
 
-            <Separator className="bg-white/10 my-1" />
+          <div className="py-1.5">
             <PlusItem icon={<Layout className="size-4" />} label="Canvas" />
             <PlusItem icon={<ListIcon className="size-4" />} label="List" />
             <PlusItem icon={<Type className="size-4" />} label="Text snippet" hint="⌘⇧Enter" />
@@ -459,14 +476,37 @@ function WorkspacePage() {
           <SettingsPanel twinActive={twinActive} />
         </SheetContent>
       </Sheet>
+
+      {/* PROFILE */}
+      <Sheet open={!!profileOpen} onOpenChange={(v) => !v && setProfileOpen(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-lg p-0 bg-[#1a1d29] border-white/10 text-white">
+          {profileOpen && <ProfileSheet who={profileOpen} onOpenDM={(id) => { setProfileOpen(null); setDmOpen(id); }} />}
+        </SheetContent>
+      </Sheet>
+
+      {/* DM */}
+      <Sheet open={!!dmOpen} onOpenChange={(v) => !v && setDmOpen(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-md p-0 bg-[#1a1d29] border-white/10 text-white">
+          {dmOpen && <DMSheet dmId={dmOpen} onOpenProfile={() => { const id = dmOpen; setDmOpen(null); setProfileOpen(id); }} />}
+        </SheetContent>
+      </Sheet>
+
+      {/* RAIL: DMs / Activity / Files */}
+      <Sheet open={!!railSheet} onOpenChange={(v) => !v && setRailSheet(null)}>
+        <SheetContent side="left" className="w-full sm:max-w-md p-0 bg-[#19171d] border-white/10 text-white ml-[68px]">
+          {railSheet === "dms" && <RailDMsSheet onOpen={(id) => { setRailSheet(null); setDmOpen(id); }} />}
+          {railSheet === "activity" && <RailActivitySheet />}
+          {railSheet === "files" && <RailFilesSheet />}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
 
 /* ------------------------------------------------------------- small UI -- */
-function RailItem({ icon, label, active }: { icon: React.ReactNode; label: string; active?: boolean }) {
+function RailItem({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) {
   return (
-    <button className="flex flex-col items-center gap-0.5 w-14 py-2 rounded-lg hover:bg-white/5 text-white/75">
+    <button onClick={onClick} className="flex flex-col items-center gap-0.5 w-14 py-2 rounded-lg hover:bg-white/5 text-white/75">
       <span className={`size-9 grid place-items-center rounded-lg ${active ? "bg-white/15 text-white" : ""}`}>{icon}</span>
       <span className="text-[10px]">{label}</span>
     </button>
@@ -491,9 +531,9 @@ function ChannelRow({ c, active, onClick }: { c: Channel; active: boolean; onCli
     </button>
   );
 }
-function TabPill({ icon, label, active }: { icon: React.ReactNode; label: string; active?: boolean }) {
+function TabPill({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active?: boolean; onClick?: () => void }) {
   return (
-    <button className={`h-9 flex items-center gap-1.5 border-b-2 px-1 ${active ? "border-white text-white" : "border-transparent text-white/60 hover:text-white"}`}>
+    <button onClick={onClick} className={`h-9 flex items-center gap-1.5 border-b-2 px-1 ${active ? "border-white text-white" : "border-transparent text-white/60 hover:text-white"}`}>
       {icon}<span>{label}</span>
     </button>
   );
@@ -951,6 +991,7 @@ function ReportsTab() {
         : kind === "onboarding" ? { role: "Post-Trade Operations Analyst", department: "Post-Trade Ops" }
         : kind === "handover" ? { employee: "Arjun Sharma" }
         : kind === "return_recap" ? { employee: "Arjun Sharma", since: "2 weeks ago" }
+        : kind === "offboarding" ? { employee: "Arjun Sharma", lastDay: "2026-07-31", role: "Compliance Officer", department: "Compliance" }
         : {};
       const r = await callSenseAI("report", { kind, params });
       toast.success(`${label} generated`);
@@ -973,6 +1014,7 @@ function ReportsTab() {
           { k: "onboarding", l: "Onboarding pack", icon: <Users className="size-3.5" />, desc: "For new joiners" },
           { k: "performance", l: "Performance metrics", icon: <TrendingUp className="size-3.5" />, desc: "Your delivery & impact" },
           { k: "dashboard", l: "Stakeholder dashboard", icon: <BarChart3 className="size-3.5" />, desc: "For managers & C-level" },
+          { k: "offboarding", l: "Offboarding pack", icon: <LogIn className="size-3.5 rotate-180" />, desc: "Full memory dump for successor" },
         ].map((x) => (
           <button
             key={x.k}
@@ -1212,6 +1254,360 @@ function Guard({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-2 p-2 rounded border border-white/10 mb-1 text-[12px]">
       <ShieldCheck className="size-3.5 text-emerald-400" /> {label}
+    </div>
+  );
+}
+
+/* ============================================================ DEMO DATA ==== */
+type PeopleRow = {
+  id: string; name: string; role: string; department: string; email: string;
+  initials: string; color: string; status: "active" | "away" | "offline"; tz: string;
+  bio: string; tenure: string; manager?: string;
+  files: { name: string; kind: string; size: string; ago: string }[];
+  activity: { ts: string; kind: "decision" | "doc" | "ticket" | "meeting" | "message"; text: string }[];
+  dm: { id: string; from: "me" | "them"; ts: string; body: string }[];
+};
+
+const people: Record<string, PeopleRow> = {
+  me: {
+    id: "me", name: "Arjun Sharma", role: "Compliance Officer", department: "Compliance",
+    email: "arjun.sharma@six-group.com", initials: "AS", color: "bg-emerald-500",
+    status: "active", tz: "Zurich · GMT+1", tenure: "2y 4m", manager: "Lukas Brunner",
+    bio: "Compliance officer focused on CSDR, T+1 settlement risk and digital-asset custody policy. SIX Sense power user.",
+    files: [
+      { name: "CSDR_Interpretation_Memo_v3.pdf", kind: "PDF", size: "412 KB", ago: "2h" },
+      { name: "T1_Risk_Register.xlsx", kind: "XLSX", size: "88 KB", ago: "yesterday" },
+      { name: "FINMA_Q3_response.docx", kind: "DOCX", size: "61 KB", ago: "3d" },
+    ],
+    activity: [
+      { ts: "10:42 AM", kind: "decision", text: "Approved APAC cut-off override for tier-1 custody clients" },
+      { ts: "9:15 AM", kind: "doc", text: "Uploaded CSDR_Interpretation_Memo_v3.pdf to SIX Sense" },
+      { ts: "Yesterday", kind: "ticket", text: "Closed SIX-218 — penalty framework dual-listing clarification" },
+      { ts: "Yesterday", kind: "meeting", text: "Reviewed T+1 risk register with Anja Müller (45m)" },
+      { ts: "Mon", kind: "message", text: "Answered 12 questions in #compliance via SIX Sense" },
+    ],
+    dm: [],
+  },
+  anja: {
+    id: "anja", name: "Anja Müller", role: "Head of Post-Trade", department: "Securities Services",
+    email: "anja.mueller@six-group.com", initials: "AM", color: "bg-rose-500",
+    status: "active", tz: "Zurich · GMT+1", tenure: "11y", manager: "Stefan Berger",
+    bio: "Owns end-to-end Post-Trade. Authority on the T+1 migration and FINMA settlement rules. SPOF risk: 47 knowledge cards.",
+    files: [
+      { name: "T1_Migration_Memo_v3.pdf", kind: "PDF", size: "1.2 MB", ago: "1d" },
+      { name: "Nostro_Funding_Buffer.xlsx", kind: "XLSX", size: "204 KB", ago: "3d" },
+    ],
+    activity: [
+      { ts: "11:08 AM", kind: "decision", text: "Signed off 14:00 CET cut-off for T+1 migration" },
+      { ts: "9:30 AM", kind: "meeting", text: "FINMA quarterly review (90m)" },
+      { ts: "Yesterday", kind: "doc", text: "Revised Nostro Funding Buffer Policy to v2" },
+    ],
+    dm: [
+      { id: "d1", from: "them", ts: "10:14 AM", body: "Hey Arjun — can you take a look at the CSDR section in the memo?" },
+      { id: "d2", from: "me", ts: "10:16 AM", body: "On it. Pulling the latest interpretation from SIX Sense now." },
+      { id: "d3", from: "them", ts: "10:18 AM", body: "Thx. Need it before the FINMA call at 2pm." },
+    ],
+  },
+  lukas: {
+    id: "lukas", name: "Lukas Brunner", role: "Senior Compliance Counsel", department: "Compliance",
+    email: "lukas.brunner@six-group.com", initials: "LB", color: "bg-amber-500",
+    status: "away", tz: "Zurich · GMT+1", tenure: "8y", manager: "Head of Legal",
+    bio: "Lead counsel on CSDR and FINMA matters. Validates governed knowledge cards in Compliance.",
+    files: [
+      { name: "Counsel_Opinion_CSDR_2024-09.pdf", kind: "PDF", size: "320 KB", ago: "1w" },
+    ],
+    activity: [
+      { ts: "Yesterday", kind: "decision", text: "Validated kc-002 — CSDR Penalty Framework interpretation" },
+      { ts: "2d", kind: "doc", text: "Reviewed 3 incoming knowledge cards from #compliance" },
+    ],
+    dm: [
+      { id: "d1", from: "them", ts: "Yesterday", body: "Pls review kc-002 when you have a moment." },
+      { id: "d2", from: "me", ts: "Yesterday", body: "Validated. Pushed to #compliance." },
+    ],
+  },
+};
+
+/* ============================================================ Profile Sheet */
+function ProfileSheet({ who, onOpenDM }: { who: string; onOpenDM: (id: string) => void }) {
+  const p = people[who] ?? people.me;
+  const [tab, setTab] = useState<"about" | "files" | "activity">("about");
+  return (
+    <div className="flex flex-col h-full">
+      <div className="px-5 pt-5 pb-4 border-b border-white/10 bg-gradient-to-br from-white/[0.04] to-transparent">
+        <div className="flex items-start gap-3">
+          <div className={`size-14 rounded-lg ${p.color} grid place-items-center text-lg font-bold text-black/80`}>{p.initials}</div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-bold text-base">{p.name}</p>
+              <span className={`size-2 rounded-full ${p.status === "active" ? "bg-emerald-400" : p.status === "away" ? "bg-amber-400" : "bg-white/30"}`} />
+              <span className="text-[11px] text-white/60 capitalize">{p.status}</span>
+            </div>
+            <p className="text-[12px] text-white/70">{p.role} · {p.department}</p>
+            <p className="text-[11px] text-white/50 mt-0.5">{p.email}</p>
+          </div>
+        </div>
+        {p.id !== "me" && (
+          <div className="flex gap-2 mt-3">
+            <Button size="sm" onClick={() => onOpenDM(p.id)} className="bg-[#007a5a] hover:bg-[#008a66] text-white h-8"><MessageSquare className="size-3.5 mr-1" /> Message</Button>
+            <Button size="sm" variant="outline" className="bg-white/5 border-white/15 text-white hover:bg-white/10 h-8"><Video className="size-3.5 mr-1" /> Huddle</Button>
+          </div>
+        )}
+      </div>
+      <div className="px-5 border-b border-white/10 flex gap-5 text-[13px]">
+        {(["about", "files", "activity"] as const).map((t) => (
+          <button key={t} onClick={() => setTab(t)} className={`h-9 border-b-2 capitalize ${tab === t ? "border-amber-400 text-white" : "border-transparent text-white/60 hover:text-white"}`}>{t}</button>
+        ))}
+      </div>
+      <ScrollArea className="flex-1">
+        {tab === "about" && (
+          <div className="p-5 space-y-3 text-[13px]">
+            <p className="text-white/85 leading-relaxed">{p.bio}</p>
+            <Separator className="bg-white/10" />
+            <Row k="Time zone" v={p.tz} />
+            <Row k="Tenure" v={p.tenure} />
+            {p.manager && <Row k="Manager" v={p.manager} />}
+            <Row k="SIX Sense" v={<Badge className="bg-emerald-500/20 text-emerald-300 border-0 text-[10px]">Twin active</Badge>} />
+          </div>
+        )}
+        {tab === "files" && (
+          <div className="p-5 space-y-2">
+            {p.files.map((f, i) => (
+              <div key={i} className="flex items-center gap-3 p-2.5 rounded border border-white/10 hover:bg-white/[0.04]">
+                <div className="size-9 rounded bg-amber-500/15 grid place-items-center"><FileText className="size-4 text-amber-300" /></div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium truncate">{f.name}</p>
+                  <p className="text-[11px] text-white/50">{f.kind} · {f.size} · {f.ago}</p>
+                </div>
+                <button className="text-white/50 hover:text-white"><FileDown className="size-4" /></button>
+              </div>
+            ))}
+          </div>
+        )}
+        {tab === "activity" && (
+          <div className="p-5 space-y-3">
+            {p.activity.map((a, i) => (
+              <div key={i} className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <div className={`size-2.5 rounded-full mt-1.5 ${a.kind === "decision" ? "bg-amber-400" : a.kind === "doc" ? "bg-sky-400" : a.kind === "ticket" ? "bg-violet-400" : a.kind === "meeting" ? "bg-emerald-400" : "bg-white/40"}`} />
+                  {i < p.activity.length - 1 && <div className="w-px flex-1 bg-white/10 my-1" />}
+                </div>
+                <div className="flex-1 pb-3">
+                  <p className="text-[11px] text-white/50">{a.ts} · <span className="capitalize">{a.kind}</span></p>
+                  <p className="text-[13px] text-white/85">{a.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+    </div>
+  );
+}
+function Row({ k, v }: { k: string; v: React.ReactNode }) {
+  return <div className="flex items-center justify-between"><span className="text-white/55">{k}</span><span className="text-white/90">{v}</span></div>;
+}
+
+/* ============================================================ DM Sheet ==== */
+function DMSheet({ dmId, onOpenProfile }: { dmId: string; onOpenProfile: () => void }) {
+  const p = people[dmId] ?? people.anja;
+  const [msgs, setMsgs] = useState(p.dm);
+  const [text, setText] = useState("");
+  const endRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs.length]);
+
+  const send = () => {
+    if (!text.trim()) return;
+    setMsgs((s) => [...s, { id: String(Date.now()), from: "me", ts: "now", body: text.trim() }]);
+    setText("");
+    setTimeout(() => {
+      setMsgs((s) => [...s, { id: String(Date.now() + 1), from: "them", ts: "now", body: "Got it — will follow up shortly." }]);
+    }, 900);
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <button onClick={onOpenProfile} className="px-4 h-14 border-b border-white/10 flex items-center gap-3 hover:bg-white/5 text-left">
+        <div className={`size-9 rounded-md ${p.color} grid place-items-center text-xs font-bold text-black/80`}>{p.initials}</div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm flex items-center gap-1.5">{p.name} <span className={`size-1.5 rounded-full ${p.status === "active" ? "bg-emerald-400" : "bg-amber-400"}`} /></p>
+          <p className="text-[11px] text-white/60 truncate">{p.role} · {p.tz}</p>
+        </div>
+        <ChevronDown className="size-4 text-white/40" />
+      </button>
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-3">
+          {msgs.map((m) => (
+            <div key={m.id} className={`flex ${m.from === "me" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[80%] rounded-lg px-3 py-2 text-[13px] ${m.from === "me" ? "bg-[#007a5a] text-white" : "bg-white/[0.06] text-white/90"}`}>
+                <p>{m.body}</p>
+                <p className="text-[10px] opacity-60 mt-0.5">{m.ts}</p>
+              </div>
+            </div>
+          ))}
+          <div ref={endRef} />
+        </div>
+      </ScrollArea>
+      <form onSubmit={(e) => { e.preventDefault(); send(); }} className="border-t border-white/10 p-3 flex gap-2">
+        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder={`Message ${p.name.split(" ")[0]}…`} className="bg-white/5 border-white/15 text-white placeholder:text-white/40" />
+        <Button type="submit" disabled={!text.trim()} className="bg-[#007a5a] hover:bg-[#008a66] text-white"><Send className="size-3.5" /></Button>
+      </form>
+    </div>
+  );
+}
+
+/* ============================================================ Rail Sheets = */
+function RailDMsSheet({ onOpen }: { onOpen: (id: string) => void }) {
+  return (
+    <div className="flex flex-col h-full">
+      <div className="h-14 border-b border-white/10 px-4 flex items-center gap-2"><MessageSquare className="size-4" /><p className="font-semibold">Direct messages</p></div>
+      <ScrollArea className="flex-1">
+        <div className="p-2 space-y-1">
+          {Object.values(people).filter((p) => p.id !== "me").map((p) => {
+            const last = p.dm[p.dm.length - 1];
+            return (
+              <button key={p.id} onClick={() => onOpen(p.id)} className="w-full flex items-start gap-3 p-2.5 rounded hover:bg-white/5 text-left">
+                <div className={`size-10 rounded-md ${p.color} grid place-items-center text-xs font-bold text-black/80`}>{p.initials}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-[13px] font-semibold truncate">{p.name}</p>
+                    <span className="text-[10px] text-white/45">{last?.ts ?? ""}</span>
+                  </div>
+                  <p className="text-[12px] text-white/55 truncate">{last?.body ?? p.role}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+function RailActivitySheet() {
+  const all = Object.values(people).flatMap((p) => p.activity.map((a) => ({ ...a, who: p.name, color: p.color, initials: p.initials })));
+  return (
+    <div className="flex flex-col h-full">
+      <div className="h-14 border-b border-white/10 px-4 flex items-center gap-2"><Activity className="size-4" /><p className="font-semibold">Activity</p></div>
+      <ScrollArea className="flex-1">
+        <div className="p-3 space-y-2">
+          {all.map((a, i) => (
+            <div key={i} className="flex gap-3 p-2.5 rounded hover:bg-white/5">
+              <div className={`size-8 rounded ${a.color} grid place-items-center text-[10px] font-bold text-black/80`}>{a.initials}</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px]"><span className="font-semibold">{a.who}</span> · <span className="capitalize text-white/60">{a.kind}</span></p>
+                <p className="text-[12px] text-white/80">{a.text}</p>
+                <p className="text-[10px] text-white/45 mt-0.5">{a.ts}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+function RailFilesSheet() {
+  const all = Object.values(people).flatMap((p) => p.files.map((f) => ({ ...f, who: p.name, color: p.color })));
+  return (
+    <div className="flex flex-col h-full">
+      <div className="h-14 border-b border-white/10 px-4 flex items-center gap-2"><FileText className="size-4" /><p className="font-semibold">All files</p></div>
+      <ScrollArea className="flex-1">
+        <div className="p-3 space-y-1.5">
+          {all.map((f, i) => (
+            <div key={i} className="flex items-center gap-3 p-2.5 rounded border border-white/10 hover:bg-white/[0.04]">
+              <div className="size-9 rounded bg-amber-500/15 grid place-items-center"><FileText className="size-4 text-amber-300" /></div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-medium truncate">{f.name}</p>
+                <p className="text-[11px] text-white/55">{f.who} · {f.kind} · {f.size} · {f.ago}</p>
+              </div>
+              <button className="text-white/50 hover:text-white"><FileDown className="size-4" /></button>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+/* ============================================================ Channel Tabs */
+function CanvasView({ channelName }: { channelName: string }) {
+  return (
+    <div className="px-8 py-6 max-w-3xl mx-auto space-y-4">
+      <div className="flex items-center gap-2 text-[11px] text-white/50 uppercase tracking-wider">
+        <Layout className="size-3.5" /> Canvas · #{channelName}
+      </div>
+      <h1 className="text-2xl font-bold">T+1 Migration · Living Brief</h1>
+      <p className="text-[13px] text-white/55">Last edited by Anja Müller · 2h ago · 4 contributors</p>
+      <Separator className="bg-white/10" />
+      <section className="space-y-2">
+        <h2 className="text-[15px] font-bold text-amber-300">Where we are</h2>
+        <p className="text-[14px] text-white/85 leading-relaxed">FINMA signed off on the 14:00 CET cut-off. APAC fallback window is in pilot with two tier-1 clients. Reconciliation cluster scaled to 12 nodes — throughput holding at 2.4M instructions/day.</p>
+      </section>
+      <section className="space-y-2">
+        <h2 className="text-[15px] font-bold text-amber-300">Open decisions</h2>
+        <ul className="list-disc pl-5 text-[14px] text-white/85 space-y-1">
+          <li>Whether to extend pre-funding to CHF & EUR nostros (Treasury reviewing)</li>
+          <li>Final go-live date for Asia-Pacific override (proposed: 2026-07-01)</li>
+          <li>SLA wording for partial-fill scenarios — Legal needed</li>
+        </ul>
+      </section>
+      <section className="space-y-2">
+        <h2 className="text-[15px] font-bold text-amber-300">Owners</h2>
+        <div className="grid grid-cols-2 gap-2">
+          {[{ n: "Anja Müller", r: "Post-Trade lead" }, { n: "Lukas Brunner", r: "Compliance review" }, { n: "Arjun Sharma", r: "Risk register" }, { n: "Thomas Keller", r: "Reconciliation eng" }].map((x) => (
+            <div key={x.n} className="rounded border border-white/10 p-2.5 text-[12px]"><p className="font-semibold">{x.n}</p><p className="text-white/55">{x.r}</p></div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function FilesView({ channelName }: { channelName: string }) {
+  const items = [
+    { n: "T1_Migration_Memo_v3.pdf", who: "Anja Müller", size: "1.2 MB", ago: "1d", kind: "PDF" },
+    { n: "CSDR_Interpretation_Memo_v3.pdf", who: "Arjun Sharma", size: "412 KB", ago: "2h", kind: "PDF" },
+    { n: "Reconciliation_Cluster_Runbook.md", who: "Thomas Keller", size: "24 KB", ago: "3d", kind: "MD" },
+    { n: "Q3_FINMA_response.docx", who: "Lukas Brunner", size: "61 KB", ago: "1w", kind: "DOCX" },
+    { n: "Nostro_Funding_Buffer.xlsx", who: "Anja Müller", size: "204 KB", ago: "3d", kind: "XLSX" },
+  ];
+  return (
+    <div className="px-6 py-5 space-y-3">
+      <p className="text-[11px] text-white/50 uppercase tracking-wider">Files in #{channelName}</p>
+      {items.map((f, i) => (
+        <div key={i} className="flex items-center gap-3 p-3 rounded border border-white/10 hover:bg-white/[0.04]">
+          <div className="size-10 rounded bg-amber-500/15 grid place-items-center"><FileText className="size-5 text-amber-300" /></div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-medium truncate">{f.n}</p>
+            <p className="text-[11px] text-white/55">{f.who} · {f.kind} · {f.size} · {f.ago}</p>
+          </div>
+          <button className="text-white/50 hover:text-white p-1.5 rounded hover:bg-white/10"><FileDown className="size-4" /></button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BookmarksView({ channelName }: { channelName: string }) {
+  const items = [
+    { t: "FINMA T+1 official guidance", u: "intra.six-group.com/finma/t-plus-one", who: "Lukas Brunner" },
+    { t: "Reconciliation throughput dashboard", u: "grafana.six-group.com/d/recon", who: "Thomas Keller" },
+    { t: "CSDR penalty calculator", u: "intra.six-group.com/csdr/calc", who: "Arjun Sharma" },
+  ];
+  return (
+    <div className="px-6 py-5 space-y-3">
+      <p className="text-[11px] text-white/50 uppercase tracking-wider">Bookmarks in #{channelName}</p>
+      {items.map((b, i) => (
+        <a key={i} href="#" className="flex items-center gap-3 p-3 rounded border border-white/10 hover:bg-white/[0.04]">
+          <Bookmark className="size-4 text-amber-300 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-medium">{b.t}</p>
+            <p className="text-[11px] text-[#69b7e8] truncate">{b.u}</p>
+            <p className="text-[10px] text-white/45 mt-0.5">Saved by {b.who}</p>
+          </div>
+          <ExternalLink className="size-3.5 text-white/40" />
+        </a>
+      ))}
     </div>
   );
 }
