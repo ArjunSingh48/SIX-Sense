@@ -3,8 +3,10 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { auditEntries } from "@/lib/mock-data";
+import { requireRoute } from "@/lib/route-guard";
 
 export const Route = createFileRoute("/_authenticated/audit")({
+  beforeLoad: () => requireRoute("/audit"),
   component: () => (
     <div>
       <PageHeader eyebrow="Audit Center" title="Complete traceability" description="Knowledge history, access logs, approvals, validations and escalations across SIX Sense." />

@@ -68,7 +68,7 @@ const channels: Channel[] = [
 ];
 
 const dms = [
-  { id: "self", name: "Arjun Sharma", role: "you", color: "bg-emerald-500" },
+  { id: "self", name: "Arjun Singh", role: "you", color: "bg-emerald-500" },
   { id: "anja", name: "Anja Müller", role: "Head of Post-Trade", color: "bg-rose-500" },
   { id: "lukas", name: "Lukas Brunner", role: "Senior Compliance Counsel", color: "bg-amber-500" },
 ];
@@ -176,7 +176,7 @@ function WorkspacePage() {
       .from("chat_messages")
       .insert({
         channel_id: activeId,
-        author_name: "Arjun Sharma",
+        author_name: "Arjun Singh",
         author_color: "bg-emerald-500",
         body: text,
         kind: "channel",
@@ -987,11 +987,11 @@ function ReportsTab() {
   const generate = async (kind: string, label: string) => {
     setBusy(kind);
     try {
-      const params = kind === "performance" ? { employee: "Arjun Sharma", period: "Q3 2026" }
+      const params = kind === "performance" ? { employee: "Arjun Singh", period: "Q3 2026" }
         : kind === "onboarding" ? { role: "Post-Trade Operations Analyst", department: "Post-Trade Ops" }
-        : kind === "handover" ? { employee: "Arjun Sharma" }
-        : kind === "return_recap" ? { employee: "Arjun Sharma", since: "2 weeks ago" }
-        : kind === "offboarding" ? { employee: "Arjun Sharma", lastDay: "2026-07-31", role: "Compliance Officer", department: "Compliance" }
+        : kind === "handover" ? { employee: "Arjun Singh" }
+        : kind === "return_recap" ? { employee: "Arjun Singh", since: "2 weeks ago" }
+        : kind === "offboarding" ? { employee: "Arjun Singh", lastDay: "2026-07-31", role: "Compliance Officer", department: "Compliance" }
         : {};
       const r = await callSenseAI("report", { kind, params });
       toast.success(`${label} generated`);
@@ -1200,7 +1200,7 @@ function SettingsPanel({ twinActive }: { twinActive: boolean }) {
             <div className="flex items-center gap-3 p-3 rounded border border-white/10">
               <div className="size-10 rounded-full bg-emerald-500 grid place-items-center font-bold text-black">AS</div>
               <div>
-                <p className="font-semibold text-sm">Arjun Sharma</p>
+                <p className="font-semibold text-sm">Arjun Singh</p>
                 <p className="text-[12px] text-white/60">arjun.sharma@six-group.com</p>
                 <p className="text-[11px] text-white/50">Compliance Officer · Zurich</p>
               </div>
@@ -1270,7 +1270,7 @@ type PeopleRow = {
 
 const people: Record<string, PeopleRow> = {
   me: {
-    id: "me", name: "Arjun Sharma", role: "Compliance Officer", department: "Compliance",
+    id: "me", name: "Arjun Singh", role: "Compliance Officer", department: "Compliance",
     email: "arjun.sharma@six-group.com", initials: "AS", color: "bg-emerald-500",
     status: "active", tz: "Zurich · GMT+1", tenure: "2y 4m", manager: "Lukas Brunner",
     bio: "Compliance officer focused on CSDR, T+1 settlement risk and digital-asset custody policy. SIX Sense power user.",
@@ -1554,7 +1554,7 @@ function CanvasView({ channelName }: { channelName: string }) {
       <section className="space-y-2">
         <h2 className="text-[15px] font-bold text-amber-300">Owners</h2>
         <div className="grid grid-cols-2 gap-2">
-          {[{ n: "Anja Müller", r: "Post-Trade lead" }, { n: "Lukas Brunner", r: "Compliance review" }, { n: "Arjun Sharma", r: "Risk register" }, { n: "Thomas Keller", r: "Reconciliation eng" }].map((x) => (
+          {[{ n: "Anja Müller", r: "Post-Trade lead" }, { n: "Lukas Brunner", r: "Compliance review" }, { n: "Arjun Singh", r: "Risk register" }, { n: "Thomas Keller", r: "Reconciliation eng" }].map((x) => (
             <div key={x.n} className="rounded border border-white/10 p-2.5 text-[12px]"><p className="font-semibold">{x.n}</p><p className="text-white/55">{x.r}</p></div>
           ))}
         </div>
@@ -1566,7 +1566,7 @@ function CanvasView({ channelName }: { channelName: string }) {
 function FilesView({ channelName }: { channelName: string }) {
   const items = [
     { n: "T1_Migration_Memo_v3.pdf", who: "Anja Müller", size: "1.2 MB", ago: "1d", kind: "PDF" },
-    { n: "CSDR_Interpretation_Memo_v3.pdf", who: "Arjun Sharma", size: "412 KB", ago: "2h", kind: "PDF" },
+    { n: "CSDR_Interpretation_Memo_v3.pdf", who: "Arjun Singh", size: "412 KB", ago: "2h", kind: "PDF" },
     { n: "Reconciliation_Cluster_Runbook.md", who: "Thomas Keller", size: "24 KB", ago: "3d", kind: "MD" },
     { n: "Q3_FINMA_response.docx", who: "Lukas Brunner", size: "61 KB", ago: "1w", kind: "DOCX" },
     { n: "Nostro_Funding_Buffer.xlsx", who: "Anja Müller", size: "204 KB", ago: "3d", kind: "XLSX" },
@@ -1592,7 +1592,7 @@ function BookmarksView({ channelName }: { channelName: string }) {
   const items = [
     { t: "FINMA T+1 official guidance", u: "intra.six-group.com/finma/t-plus-one", who: "Lukas Brunner" },
     { t: "Reconciliation throughput dashboard", u: "grafana.six-group.com/d/recon", who: "Thomas Keller" },
-    { t: "CSDR penalty calculator", u: "intra.six-group.com/csdr/calc", who: "Arjun Sharma" },
+    { t: "CSDR penalty calculator", u: "intra.six-group.com/csdr/calc", who: "Arjun Singh" },
   ];
   return (
     <div className="px-6 py-5 space-y-3">

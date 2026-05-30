@@ -18,7 +18,10 @@ const signalLabel: Record<string, string> = {
   missing_docs: "Missing documentation",
 };
 
+import { requireRoute } from "@/lib/route-guard";
+
 export const Route = createFileRoute("/_authenticated/risk")({
+  beforeLoad: () => requireRoute("/risk"),
   component: () => (
     <div>
       <PageHeader eyebrow="Knowledge Continuity Risk" title="Where knowledge is at risk" description="SIX Sense identifies leaving employees, single-points-of-failure, concentration and missing documentation — and recommends mitigation." />

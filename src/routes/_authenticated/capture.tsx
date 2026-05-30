@@ -10,7 +10,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
+import { requireRoute } from "@/lib/route-guard";
+
 export const Route = createFileRoute("/_authenticated/capture")({
+  beforeLoad: () => requireRoute("/capture"),
   component: CapturePage,
 });
 

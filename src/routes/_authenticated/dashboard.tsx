@@ -19,7 +19,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { execKpis, knowledgeGrowth, departmentActivity, escalations } from "@/lib/mock-data";
 
+import { requireRoute } from "@/lib/route-guard";
+
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  beforeLoad: () => requireRoute("/dashboard"),
   component: DashboardPage,
 });
 

@@ -24,8 +24,12 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useCurrentPersona } from "@/lib/personas";
+import { canAccess, type RouteKey } from "@/lib/permissions";
 
-const groups = [
+type Item = { title: string; url: RouteKey; icon: typeof Hash };
+
+const groups: { label: string; items: Item[] }[] = [
   {
     label: "Workspace",
     items: [
@@ -57,13 +61,21 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
+  const persona = useCurrentPersona();
   const isActive = (path: string) =>
     path === "/dashboard" ? currentPath.startsWith("/dashboard") : currentPath.startsWith(path);
+
+  const visibleGroups = groups
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) => (persona ? canAccess(i.url, persona.role) : true)),
+    }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <Link to="/dashboard" className="flex items-center gap-2.5 px-2 py-3">
+        <Link to="/" className="flex items-center gap-2.5 px-2 py-3">
           <div className="size-8 rounded-lg bg-gradient-hero grid place-items-center shadow-elevated">
             <span className="text-primary-foreground font-bold text-sm tracking-tight">S6</span>
           </div>
@@ -76,7 +88,7 @@ export function AppSidebar() {
         </Link>
       </SidebarHeader>
       <SidebarContent>
-        {groups.map((g) => (
+        {visibleGroups.map((g) => (
           <SidebarGroup key={g.label}>
             <SidebarGroupLabel>{g.label}</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -99,3 +111,4 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+

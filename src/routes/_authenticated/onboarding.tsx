@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { departments } from "@/lib/mock-data";
 
+import { requireRoute } from "@/lib/route-guard";
+
 export const Route = createFileRoute("/_authenticated/onboarding")({
+  beforeLoad: () => requireRoute("/onboarding"),
   component: OnboardingPage,
 });
 
