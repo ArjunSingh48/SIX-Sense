@@ -1,11 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, ShieldCheck } from "lucide-react";
 import { PERSONAS, setCurrentPersona, type Persona } from "@/lib/personas";
 import { HOME_FOR_ROLE } from "@/lib/permissions";
 
 export const Route = createFileRoute("/")({
   component: EntryPage,
 });
+
+const BG = "#3F0E40";
+const STRIP = "#F4EDE4";
+const ACCENT = "#611F69";
 
 function EntryPage() {
   const navigate = useNavigate();
@@ -16,56 +19,96 @@ function EntryPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-background via-background to-muted/30 flex flex-col">
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-16">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="size-11 rounded-xl bg-gradient-hero grid place-items-center shadow-elevated">
-            <span className="text-primary-foreground font-bold tracking-tight">S6</span>
+    <div className="min-h-screen w-full" style={{ backgroundColor: BG }}>
+      {/* Top bar */}
+      <header className="px-8 py-6 flex items-center">
+        <div className="flex items-center gap-2 text-white">
+          <div
+            className="size-9 rounded-lg grid place-items-center font-bold"
+            style={{ backgroundColor: "#ECB22E", color: "#3F0E40" }}
+          >
+            S6
           </div>
           <div className="leading-tight">
             <div className="text-xl font-semibold tracking-tight">SIX Sense</div>
-            <div className="text-xs text-muted-foreground">Governed expert knowledge</div>
+            <div className="text-[10px] uppercase tracking-widest opacity-70">
+              Governed expert knowledge
+            </div>
           </div>
         </div>
+      </header>
 
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-center max-w-2xl">
-          Continue as
+      {/* Content */}
+      <main className="mx-auto max-w-3xl px-6 pb-24">
+        <h1 className="text-white text-5xl md:text-6xl font-semibold tracking-tight mt-8 mb-10">
+          <span className="mr-3" aria-hidden>👋</span>Welcome back
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground text-center max-w-md">
-          Pick a profile to enter the demo workspace. Each role sees a different view of the same governed knowledge.
-        </p>
 
-        <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-5 w-full max-w-4xl">
+        {/* Strip */}
+        <div
+          className="rounded-t-lg px-6 py-4 text-[15px]"
+          style={{ backgroundColor: STRIP, color: "#1D1C1D" }}
+        >
+          Personas for <span className="font-semibold">six-sense.demo</span>
+        </div>
+
+        {/* Persona cards */}
+        <div className="bg-white rounded-b-lg overflow-hidden divide-y divide-neutral-200 shadow-lg">
           {PERSONAS.map((p) => (
-            <button
+            <div
               key={p.id}
-              onClick={() => choose(p)}
-              className="group text-left rounded-2xl border bg-card p-6 shadow-sm hover:shadow-elevated hover:border-primary/40 transition-all relative overflow-hidden"
+              className="flex items-center gap-5 px-6 py-5"
             >
               <div
-                className={`size-14 rounded-full ${p.avatarColor} text-white grid place-items-center font-semibold text-lg shadow`}
+                className={`size-14 rounded-lg ${p.avatarColor} text-white grid place-items-center font-semibold text-lg shrink-0`}
               >
                 {p.initials}
               </div>
-              <div className="mt-5">
-                <div className="text-lg font-semibold tracking-tight">{p.name}</div>
-                <div className="text-sm text-muted-foreground">{p.email}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-lg font-bold tracking-tight text-neutral-900 truncate">
+                  {p.name}
+                </div>
+                <div className="text-sm text-neutral-600 truncate">{p.email}</div>
               </div>
-              <div className="mt-6 flex items-center text-sm font-medium text-primary group-hover:gap-2 transition-all">
-                Continue
-                <ArrowRight className="size-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
-              </div>
-            </button>
+              <button
+                onClick={() => choose(p)}
+                className="px-5 py-3 rounded-md text-white text-xs font-bold tracking-[0.15em] uppercase hover:opacity-90 transition-opacity shrink-0"
+                style={{ backgroundColor: ACCENT }}
+              >
+                Enter
+              </button>
+            </div>
           ))}
         </div>
-      </div>
 
-      <footer className="border-t bg-card/40 backdrop-blur py-4 px-6">
-        <div className="max-w-4xl mx-auto flex items-center justify-center gap-2 text-xs text-muted-foreground">
-          <ShieldCheck className="size-3.5" />
-          <span>No source, no answer · No confidence, no action · No access rights, no disclosure</span>
+        {/* Secondary informational band */}
+        <div
+          className="mt-10 rounded-lg px-6 py-5 flex items-center gap-5 shadow-lg"
+          style={{ backgroundColor: "#FFFFFF" }}
+        >
+          <div
+            className="size-14 rounded-lg grid place-items-center text-2xl shrink-0"
+            style={{ backgroundColor: "#FCE8D5" }}
+            aria-hidden
+          >
+            🔄
+          </div>
+          <div className="flex-1 text-[15px] text-neutral-800">
+            Need a different view? You can switch personas anytime from the top bar.
+          </div>
+          <div
+            className="px-4 py-2 rounded-md text-xs font-bold tracking-[0.15em] uppercase border"
+            style={{ borderColor: ACCENT, color: ACCENT }}
+          >
+            Role-based access
+          </div>
         </div>
-      </footer>
+
+        {/* Footer principle */}
+        <p className="mt-12 text-center text-xs text-white/60 tracking-wide">
+          No source, no answer · No confidence, no action · No access rights, no disclosure
+        </p>
+      </main>
     </div>
   );
 }
