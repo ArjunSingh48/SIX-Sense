@@ -341,13 +341,6 @@ function WorkspacePage() {
               {d.role === "you" && <span className="text-[11px] text-white/50">you</span>}
             </button>
           ))}
-          {roleTools.map((t) => (
-            <Link key={`dm-${t.url}`} to={t.url} className="w-full flex items-center gap-2 px-4 py-1 hover:bg-white/5 text-left">
-              <span className={`size-3.5 rounded-sm ${t.color}`} />
-              <span className="text-[14px] text-white/85 truncate">{t.label}</span>
-              <span className="text-[11px] text-white/50">app</span>
-            </Link>
-          ))}
         </ScrollArea>
       </aside>
 
