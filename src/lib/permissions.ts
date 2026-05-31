@@ -15,13 +15,13 @@ export type RouteKey =
 const MATRIX: Record<RouteKey, Role[]> = {
   "/workspace": ["employee", "compliance_officer", "manager"],
   "/ask": ["employee", "compliance_officer", "manager"],
-  "/capture": ["employee", "compliance_officer"],
-  "/onboarding": ["employee", "manager"],
+  "/capture": ["employee", "compliance_officer", "manager"],
+  "/onboarding": ["employee", "compliance_officer", "manager"],
   "/knowledge": ["employee", "compliance_officer", "manager"],
   "/twin": ["employee", "compliance_officer", "manager"],
   "/audit": ["compliance_officer", "manager"],
   "/risk": ["compliance_officer", "manager"],
-  "/dashboard": ["compliance_officer", "manager"],
+  "/dashboard": ["manager"],
   "/settings": ["employee", "compliance_officer", "manager"],
 };
 
@@ -31,8 +31,8 @@ export function canAccess(route: RouteKey, role: Role): boolean {
 
 export const HOME_FOR_ROLE: Record<Role, RouteKey> = {
   employee: "/workspace",
-  compliance_officer: "/audit",
-  manager: "/dashboard",
+  compliance_officer: "/workspace",
+  manager: "/workspace",
 };
 
 export function allowedRoutes(role: Role): RouteKey[] {

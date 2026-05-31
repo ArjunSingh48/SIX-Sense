@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Hash, Lock, Plus, Send, Sparkles, Star, Bell, Search, HelpCircle,
@@ -22,6 +22,8 @@ import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentPersona, type Role } from "@/lib/personas";
+import { canAccess, type RouteKey } from "@/lib/permissions";
 
 export const Route = createFileRoute("/_authenticated/workspace")({
   component: WorkspacePage,
@@ -67,10 +69,10 @@ const channels: Channel[] = [
   { id: "random", name: "random", topic: "Coffee, ski weekends, and lost laptops" },
 ];
 
-const dms = [
-  { id: "self", name: "Arjun Singh", role: "you", color: "bg-emerald-500" },
-  { id: "anja", name: "Anja Müller", role: "Head of Post-Trade", color: "bg-rose-500" },
-  { id: "lukas", name: "Lukas Brunner", role: "Senior Compliance Counsel", color: "bg-amber-500" },
+const ALL_DMS = [
+  { id: "arjun", name: "Arjun Singh", role: "Reference Data Analyst", color: "bg-emerald-500" },
+  { id: "david", name: "David Brupbacher", role: "Chief Knowledge Officer", color: "bg-amber-500" },
+  { id: "jacob", name: "Jacob Gertel", role: "Data & Compliance Officer", color: "bg-indigo-500" },
 ];
 
 const seedMessages: Msg[] = [
@@ -123,6 +125,17 @@ const initials = (n: string) => n.split(" ").map((p) => p[0]).join("").slice(0, 
 
 /* ------------------------------------------------------------------- page -- */
 function WorkspacePage() {
+  const persona = useCurrentPersona();
+  const roleTools: { url: RouteKey; label: string; icon: React.ReactNode; color: string }[] = ([
+    { url: "/dashboard" as const, label: "Executive Dashboard", icon: <BarChart3 className="size-3.5 text-sky-400" />, color: "bg-sky-500" },
+    { url: "/audit" as const, label: "Audit Center", icon: <ShieldCheck className="size-3.5 text-emerald-400" />, color: "bg-emerald-500" },
+    { url: "/risk" as const, label: "Continuity Risk", icon: <Shield className="size-3.5 text-amber-400" />, color: "bg-amber-500" },
+  ]).filter((t) => (persona ? canAccess(t.url, persona.role) : false));
+  const selfName = persona?.name ?? "Arjun Singh";
+  const dms = ALL_DMS.map((d) => ({
+    ...d,
+    role: d.name === selfName ? "you" : d.role,
+  }));
   const [activeId, setActiveId] = useState("general");
   const [messages, setMessages] = useState<Msg[]>(seedMessages);
   const [draft, setDraft] = useState("");
@@ -282,6 +295,21 @@ function WorkspacePage() {
             <SidebarItem icon={<Brain className="size-3.5 text-amber-400" />} label="SIX Sense · Digital Twin" onClick={() => setTwinPanelOpen(true)} />
           )}
 
+          {roleTools.length > 0 && (
+            <>
+              <div className="mt-4 mb-1 px-4 flex items-center gap-1 text-white/60">
+                <ChevronDown className="size-3" />
+                <span className="text-[13px] font-semibold">Workspace tools</span>
+              </div>
+              {roleTools.map((t) => (
+                <Link key={t.url} to={t.url} className="w-full flex items-center gap-2 px-4 py-1 hover:bg-white/5 text-[14px] text-white/85">
+                  {t.icon}
+                  <span className="truncate">{t.label}</span>
+                </Link>
+              ))}
+            </>
+          )}
+
           <div className="mt-4 mb-1 px-4 flex items-center gap-1 text-white/60">
             <ChevronDown className="size-3" />
             <span className="text-[13px] font-semibold">Starred</span>
@@ -307,11 +335,18 @@ function WorkspacePage() {
             <Plus className="size-3 hover:text-white cursor-pointer" />
           </div>
           {dms.map((d) => (
-            <button key={d.id} onClick={() => d.id === "self" ? setProfileOpen("me") : setDmOpen(d.id)} className="w-full flex items-center gap-2 px-4 py-1 hover:bg-white/5 text-left">
+            <button key={d.id} onClick={() => d.role === "you" ? setProfileOpen("me") : setDmOpen(d.id)} className="w-full flex items-center gap-2 px-4 py-1 hover:bg-white/5 text-left">
               <span className={`size-3.5 rounded-sm ${d.color}`} />
               <span className="text-[14px] text-white/85 truncate">{d.name}</span>
               {d.role === "you" && <span className="text-[11px] text-white/50">you</span>}
             </button>
+          ))}
+          {roleTools.map((t) => (
+            <Link key={`dm-${t.url}`} to={t.url} className="w-full flex items-center gap-2 px-4 py-1 hover:bg-white/5 text-left">
+              <span className={`size-3.5 rounded-sm ${t.color}`} />
+              <span className="text-[14px] text-white/85 truncate">{t.label}</span>
+              <span className="text-[11px] text-white/50">app</span>
+            </Link>
           ))}
         </ScrollArea>
       </aside>
@@ -466,7 +501,7 @@ function WorkspacePage() {
       {/* SIX SENSE PANEL */}
       <Sheet open={twinPanelOpen} onOpenChange={setTwinPanelOpen}>
         <SheetContent side="right" className="w-full sm:max-w-lg p-0 bg-[#1a1d29] border-white/10 text-white">
-          <TwinPanel channel={active} onOpenSettings={() => { setTwinPanelOpen(false); setSettingsOpen(true); }} />
+          <TwinPanel channel={active} role={persona?.role ?? "employee"} onOpenSettings={() => { setTwinPanelOpen(false); setSettingsOpen(true); }} />
         </SheetContent>
       </Sheet>
 
@@ -656,7 +691,7 @@ type Turn = {
   pending?: boolean;
 };
 
-function TwinPanel({ channel, onOpenSettings }: { channel: Channel; onOpenSettings: () => void }) {
+function TwinPanel({ channel, role, onOpenSettings }: { channel: Channel; role: Role; onOpenSettings: () => void }) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -751,6 +786,12 @@ function TwinPanel({ channel, onOpenSettings }: { channel: Channel; onOpenSettin
           <TabsTrigger value="upload" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Upload</TabsTrigger>
           <TabsTrigger value="progress" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Progress</TabsTrigger>
           <TabsTrigger value="reports" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Reports</TabsTrigger>
+          {role === "manager" && (
+            <TabsTrigger value="company" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Company Progress</TabsTrigger>
+          )}
+          {role === "compliance_officer" && (
+            <TabsTrigger value="audit-risk" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Audit &amp; Risk</TabsTrigger>
+          )}
         </TabsList>
 
         {/* Ask */}
@@ -865,6 +906,20 @@ function TwinPanel({ channel, onOpenSettings }: { channel: Channel; onOpenSettin
         <TabsContent value="reports" className="flex-1 m-0 overflow-auto">
           <ReportsTab />
         </TabsContent>
+
+        {/* Company Progress (manager only) */}
+        {role === "manager" && (
+          <TabsContent value="company" className="flex-1 m-0 overflow-auto">
+            <CompanyProgressTab />
+          </TabsContent>
+        )}
+
+        {/* Audit & Risk (compliance only) */}
+        {role === "compliance_officer" && (
+          <TabsContent value="audit-risk" className="flex-1 m-0 overflow-auto">
+            <AuditRiskTab />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
@@ -1288,41 +1343,42 @@ const people: Record<string, PeopleRow> = {
     ],
     dm: [],
   },
-  anja: {
-    id: "anja", name: "Anja Müller", role: "Head of Post-Trade", department: "Securities Services",
-    email: "anja.mueller@six-group.com", initials: "AM", color: "bg-rose-500",
-    status: "active", tz: "Zurich · GMT+1", tenure: "11y", manager: "Stefan Berger",
-    bio: "Owns end-to-end Post-Trade. Authority on the T+1 migration and FINMA settlement rules. SPOF risk: 47 knowledge cards.",
+  david: {
+    id: "david", name: "David Brupbacher", role: "Chief Knowledge Officer", department: "Executive",
+    email: "david.brupbacher@six-group.com", initials: "DB", color: "bg-amber-500",
+    status: "active", tz: "Zurich · GMT+1", tenure: "15y", manager: "Board",
+    bio: "Chief Knowledge Officer driving enterprise-wide digital transformation, SIX Sense adoption, and strategic knowledge governance.",
     files: [
-      { name: "T1_Migration_Memo_v3.pdf", kind: "PDF", size: "1.2 MB", ago: "1d" },
-      { name: "Nostro_Funding_Buffer.xlsx", kind: "XLSX", size: "204 KB", ago: "3d" },
+      { name: "Executive_Knowledge_Strategy_2026.pdf", kind: "PDF", size: "2.1 MB", ago: "1d" },
+      { name: "Digital_Twin_ROI_Model.xlsx", kind: "XLSX", size: "340 KB", ago: "3d" },
     ],
     activity: [
-      { ts: "11:08 AM", kind: "decision", text: "Signed off 14:00 CET cut-off for T+1 migration" },
-      { ts: "9:30 AM", kind: "meeting", text: "FINMA quarterly review (90m)" },
-      { ts: "Yesterday", kind: "doc", text: "Revised Nostro Funding Buffer Policy to v2" },
+      { ts: "11:00 AM", kind: "decision", text: "Approved SIX Sense rollout to all Post-Trade divisions" },
+      { ts: "9:00 AM", kind: "meeting", text: "Board update on knowledge-retention metrics (60m)" },
+      { ts: "Yesterday", kind: "doc", text: "Published Q2 Company Progress Report" },
     ],
     dm: [
-      { id: "d1", from: "them", ts: "10:14 AM", body: "Hey Arjun — can you take a look at the CSDR section in the memo?" },
-      { id: "d2", from: "me", ts: "10:16 AM", body: "On it. Pulling the latest interpretation from SIX Sense now." },
-      { id: "d3", from: "them", ts: "10:18 AM", body: "Thx. Need it before the FINMA call at 2pm." },
+      { id: "d1", from: "them", ts: "10:14 AM", body: "Can you review the latest Company Progress summary before the board call?" },
+      { id: "d2", from: "me", ts: "10:16 AM", body: "Already on it. The gap analysis looks strong this quarter." },
+      { id: "d3", from: "them", ts: "10:18 AM", body: "Great — let’s finalize by 2pm." },
     ],
   },
-  lukas: {
-    id: "lukas", name: "Lukas Brunner", role: "Senior Compliance Counsel", department: "Compliance",
-    email: "lukas.brunner@six-group.com", initials: "LB", color: "bg-amber-500",
-    status: "away", tz: "Zurich · GMT+1", tenure: "8y", manager: "Head of Legal",
-    bio: "Lead counsel on CSDR and FINMA matters. Validates governed knowledge cards in Compliance.",
+  jacob: {
+    id: "jacob", name: "Jacob Gertel", role: "Data & Compliance Officer", department: "Compliance",
+    email: "jacob.gertel@six-group.com", initials: "JG", color: "bg-indigo-500",
+    status: "active", tz: "Zurich · GMT+1", tenure: "9y", manager: "Head of Legal",
+    bio: "Data & Compliance Officer overseeing information governance, audit readiness, and continuity risk across SIX Group.",
     files: [
-      { name: "Counsel_Opinion_CSDR_2024-09.pdf", kind: "PDF", size: "320 KB", ago: "1w" },
+      { name: "Audit_Risk_Assessment_Q2.pdf", kind: "PDF", size: "580 KB", ago: "2d" },
+      { name: "Rollback_Playbook_v4.docx", kind: "DOCX", size: "120 KB", ago: "1w" },
     ],
     activity: [
-      { ts: "Yesterday", kind: "decision", text: "Validated kc-002 — CSDR Penalty Framework interpretation" },
-      { ts: "2d", kind: "doc", text: "Reviewed 3 incoming knowledge cards from #compliance" },
+      { ts: "Yesterday", kind: "decision", text: "Flagged 2 high-risk leak surfaces in Digital Assets custody" },
+      { ts: "2d", kind: "doc", text: "Updated rollback timeline through end of May" },
     ],
     dm: [
-      { id: "d1", from: "them", ts: "Yesterday", body: "Pls review kc-002 when you have a moment." },
-      { id: "d2", from: "me", ts: "Yesterday", body: "Validated. Pushed to #compliance." },
+      { id: "d1", from: "them", ts: "Yesterday", body: "Please validate the latest audit-risk findings when you have a moment." },
+      { id: "d2", from: "me", ts: "Yesterday", body: "Done. I’ve added the rollback steps to the timeline as well." },
     ],
   },
 };
@@ -1409,7 +1465,7 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
 
 /* ============================================================ DM Sheet ==== */
 function DMSheet({ dmId, onOpenProfile }: { dmId: string; onOpenProfile: () => void }) {
-  const p = people[dmId] ?? people.anja;
+  const p = people[dmId] ?? people.me;
   const [msgs, setMsgs] = useState(p.dm);
   const [text, setText] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
@@ -1608,6 +1664,294 @@ function BookmarksView({ channelName }: { channelName: string }) {
           <ExternalLink className="size-3.5 text-white/40" />
         </a>
       ))}
+    </div>
+  );
+}
+
+/* ---------------- Company Progress Tab (manager / David) ---------------- */
+type DeptProgress = {
+  name: string;
+  lead: string;
+  progress: number;
+  highlights: string[];
+  gaps: { gap: string; fill: string }[];
+};
+
+const COMPANY_PROGRESS: DeptProgress[] = [
+  {
+    name: "Post-Trade Operations",
+    lead: "Anja Müller",
+    progress: 78,
+    highlights: [
+      "T+1 settlement migration framework signed off with FINMA",
+      "CSDR penalty automation live in 6 of 9 corridors",
+      "Reduced failed settlements 31% QoQ",
+    ],
+    gaps: [
+      { gap: "No documented runbook for HSM key ceremony", fill: "Capture ceremony from Lukas via Digital Twin interview → publish governed runbook" },
+      { gap: "Single point of failure: only 1 analyst trained on EquiLend reconciliation", fill: "Trigger onboarding pack generation for 2 backup analysts (Knowledge Library has 4 source docs)" },
+    ],
+  },
+  {
+    name: "Compliance & Risk",
+    lead: "Jacob Gertel",
+    progress: 64,
+    highlights: [
+      "FINMA audit trail coverage at 92% across regulated workflows",
+      "Policy reviews automated for 14 of 22 policies",
+      "Zero open critical findings in last 60 days",
+    ],
+    gaps: [
+      { gap: "Digital-assets custody policy older than 18 months", fill: "Auto-draft revision from 7 indexed FINMA circulars + flag for SME validation" },
+      { gap: "No continuity plan for cross-border CSDR interpretation working group", fill: "Knowledge base has 12 thread captures — generate succession brief for 2 deputies" },
+    ],
+  },
+  {
+    name: "Digital Assets",
+    lead: "Markus Fehr",
+    progress: 52,
+    highlights: [
+      "Cold-storage SLA hitting 99.97%",
+      "2 new institutional custody clients onboarded this quarter",
+    ],
+    gaps: [
+      { gap: "Key ceremony tribal knowledge not captured", fill: "Schedule capture session — Digital Twin will OCR the whiteboard photos already uploaded" },
+      { gap: "Bloomberg terminal procurement guardrails unclear (raised in #general)", fill: "Cross-link procurement policy v3.1 from Knowledge Library and pin to channel canvas" },
+    ],
+  },
+  {
+    name: "Technology & Platform",
+    lead: "Priya Raman",
+    progress: 81,
+    highlights: [
+      "Internal RAG search rolled out to 4,623 employees",
+      "Latency p95 < 1.2s across knowledge endpoints",
+    ],
+    gaps: [
+      { gap: "Onboarding for new platform engineers takes 6+ weeks", fill: "Auto-generated onboarding pack reduces ramp to 12 days (validated on last 3 hires)" },
+    ],
+  },
+];
+
+function CompanyProgressTab() {
+  const overall = Math.round(COMPANY_PROGRESS.reduce((s, d) => s + d.progress, 0) / COMPANY_PROGRESS.length);
+
+  const exportPdf = async () => {
+    const { default: jsPDF } = await import("jspdf");
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+    const M = 48;
+    let y = M;
+
+    doc.setFillColor(63, 14, 64);
+    doc.rect(0, 0, W, 90, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.text("SIX Sense · Company Progress", M, 48);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(`Generated ${new Date().toLocaleString()} · Overall: ${overall}%`, M, 70);
+    y = 120;
+
+    doc.setTextColor(20, 20, 20);
+
+    for (const d of COMPANY_PROGRESS) {
+      if (y > H - 140) { doc.addPage(); y = M; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text(`${d.name}  —  ${d.progress}%`, M, y);
+      y += 14;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(90, 90, 90);
+      doc.text(`Lead: ${d.lead}`, M, y);
+      y += 14;
+
+      doc.setTextColor(20, 20, 20);
+      doc.setFont("helvetica", "bold");
+      doc.text("Highlights", M, y); y += 12;
+      doc.setFont("helvetica", "normal");
+      for (const h of d.highlights) {
+        const lines = doc.splitTextToSize(`• ${h}`, W - M * 2);
+        if (y + lines.length * 12 > H - M) { doc.addPage(); y = M; }
+        doc.text(lines, M, y); y += lines.length * 12;
+      }
+      y += 4;
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(180, 60, 40);
+      doc.text("Gaps & fills", M, y); y += 12;
+      doc.setTextColor(20, 20, 20);
+      doc.setFont("helvetica", "normal");
+      for (const g of d.gaps) {
+        const gap = doc.splitTextToSize(`• Gap: ${g.gap}`, W - M * 2);
+        const fill = doc.splitTextToSize(`   ↳ Fill: ${g.fill}`, W - M * 2);
+        if (y + (gap.length + fill.length) * 12 > H - M) { doc.addPage(); y = M; }
+        doc.text(gap, M, y); y += gap.length * 12;
+        doc.setTextColor(20, 110, 70);
+        doc.text(fill, M, y); y += fill.length * 12;
+        doc.setTextColor(20, 20, 20);
+      }
+      y += 18;
+    }
+
+    doc.save(`SIX-Sense-Company-Progress-${new Date().toISOString().slice(0, 10)}.pdf`);
+    toast.success("PDF exported", { description: "Ready to share with stakeholders." });
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="rounded-lg border border-white/10 bg-gradient-to-br from-amber-500/10 to-rose-500/10 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[12px] uppercase tracking-wider text-white/60 font-semibold flex items-center gap-1.5">
+            <Building2 className="size-3.5 text-amber-400" /> SIX Group · company-wide
+          </p>
+          <Button size="sm" onClick={exportPdf} className="h-7 bg-amber-500 hover:bg-amber-400 text-black text-[11px]">
+            <FileDown className="size-3.5 mr-1" /> Export PDF
+          </Button>
+        </div>
+        <div className="flex items-baseline gap-2 mb-1.5">
+          <span className="text-3xl font-bold">{overall}%</span>
+          <span className="text-[11px] text-white/60">average progress · 4 departments</span>
+        </div>
+        <Progress value={overall} className="h-1.5" />
+      </div>
+
+      <div className="space-y-3">
+        {COMPANY_PROGRESS.map((d) => (
+          <div key={d.name} className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div>
+                <p className="text-[13px] font-semibold">{d.name}</p>
+                <p className="text-[11px] text-white/55">Lead: {d.lead}</p>
+              </div>
+              <span className="text-[12px] font-semibold text-amber-300">{d.progress}%</span>
+            </div>
+            <Progress value={d.progress} className="h-1 mb-3" />
+
+            <p className="text-[10px] uppercase tracking-wider text-emerald-300/80 font-semibold mb-1">Highlights</p>
+            <ul className="space-y-1 mb-3">
+              {d.highlights.map((h, i) => (
+                <li key={i} className="text-[12px] text-white/85 flex gap-1.5">
+                  <Check className="size-3 text-emerald-400 mt-0.5 shrink-0" /> {h}
+                </li>
+              ))}
+            </ul>
+
+            <p className="text-[10px] uppercase tracking-wider text-rose-300/80 font-semibold mb-1">Gaps &amp; suggested fills</p>
+            <ul className="space-y-1.5">
+              {d.gaps.map((g, i) => (
+                <li key={i} className="text-[12px] text-white/85 border-l-2 border-rose-400/40 pl-2">
+                  <p className="text-rose-200/90">{g.gap}</p>
+                  <p className="text-emerald-200/85 flex gap-1 mt-0.5">
+                    <ArrowRight className="size-3 mt-0.5 shrink-0" /> {g.fill}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Audit & Risk Tab (compliance / Jacob) ---------------- */
+type LeakRisk = { area: string; severity: "low" | "medium" | "high"; detail: string; mitigation: string };
+type TimelineEvent = { ts: string; actor: string; action: string; entity: string; reversible: boolean };
+
+const LEAK_RISKS: LeakRisk[] = [
+  { area: "Client data in #external_partners_csd", severity: "high",
+    detail: "Channel includes 2 external custody partners with access to message history.",
+    mitigation: "Enable DLP scan + auto-redact ISINs and account numbers; reduce retention to 30 days." },
+  { area: "HSM key card lost (Jonas Schmid, 10:45 AM #general)", severity: "high",
+    detail: "Hardware security module credential physically missing; reported in public channel.",
+    mitigation: "Rotate key ceremony immediately, revoke card, audit access logs for past 72h." },
+  { area: "Digital twin training corpus contains PII", severity: "medium",
+    detail: "12 indexed PDFs contain employee names + role assignments without redaction.",
+    mitigation: "Re-ingest with PII masking; apply access_level=restricted on affected cards." },
+  { area: "Treuhänder request in #general (Ziad Malik)", severity: "low",
+    detail: "Solicitation of third-party services in public channel; minor reputational/leakage risk.",
+    mitigation: "Suggest move to DM; no action required." },
+];
+
+const TIMELINE: TimelineEvent[] = [
+  { ts: "2026-05-30 10:14", actor: "Arjun Singh", action: "Posted T+1 migration memo v3", entity: "#general · message m1", reversible: true },
+  { ts: "2026-05-30 10:45", actor: "Jonas Schmid", action: "Reported lost HSM key card", entity: "#general · message m2", reversible: false },
+  { ts: "2026-05-29 18:02", actor: "SIX Sense", action: "Indexed 4 PDFs into knowledge base", entity: "knowledge_cards (+4)", reversible: true },
+  { ts: "2026-05-29 14:30", actor: "Lukas Brunner", action: "Updated CSDR interpretation card", entity: "card csdr-2024-v3", reversible: true },
+  { ts: "2026-05-28 09:11", actor: "Jacob Gertel", action: "Approved access_level=executive on 3 cards", entity: "knowledge_cards", reversible: true },
+  { ts: "2026-05-27 16:45", actor: "Anja Müller", action: "Onboarded external partner to #external_partners_csd", entity: "channel membership", reversible: true },
+  { ts: "2026-05-26 11:20", actor: "SIX Sense", action: "Auto-generated onboarding pack for Operations", entity: "onboarding_packs (+1)", reversible: true },
+];
+
+function AuditRiskTab() {
+  const sevColor = (s: LeakRisk["severity"]) =>
+    s === "high" ? "bg-rose-500/20 text-rose-300 border-rose-500/30"
+    : s === "medium" ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
+    : "bg-sky-500/20 text-sky-300 border-sky-500/30";
+
+  return (
+    <div className="p-4 space-y-4">
+      {/* Leak risks */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[12px] uppercase tracking-wider text-white/60 font-semibold flex items-center gap-1.5">
+            <ShieldCheck className="size-3.5 text-rose-400" /> Auditor risk · information leak surfaces
+          </p>
+          <Badge className="bg-rose-500/20 text-rose-300 border-0 text-[10px]">{LEAK_RISKS.filter(r => r.severity === "high").length} high</Badge>
+        </div>
+        <div className="space-y-2">
+          {LEAK_RISKS.map((r, i) => (
+            <div key={i} className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <p className="text-[13px] font-semibold">{r.area}</p>
+                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${sevColor(r.severity)}`}>{r.severity.toUpperCase()}</span>
+              </div>
+              <p className="text-[12px] text-white/75 mb-1.5">{r.detail}</p>
+              <p className="text-[11px] text-emerald-200/85 flex gap-1">
+                <ArrowRight className="size-3 mt-0.5 shrink-0" /> {r.mitigation}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Rollback timeline */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[12px] uppercase tracking-wider text-white/60 font-semibold flex items-center gap-1.5">
+            <GitBranch className="size-3.5 text-sky-400" /> Rollback timeline · current state
+          </p>
+          <span className="text-[10px] text-white/50">latest first</span>
+        </div>
+        <div className="relative border-l border-white/15 ml-2 pl-4 space-y-3">
+          {TIMELINE.map((e, i) => (
+            <div key={i} className="relative">
+              <span className={`absolute -left-[22px] top-1 size-2.5 rounded-full ring-2 ring-[#1a1d29] ${i === 0 ? "bg-emerald-400" : "bg-white/40"}`} />
+              <div className="rounded border border-white/10 bg-white/[0.03] p-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[12px] font-semibold">{e.action}</p>
+                  {e.reversible ? (
+                    <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] text-amber-300 hover:bg-amber-500/10 hover:text-amber-200">
+                      Roll back
+                    </Button>
+                  ) : (
+                    <Badge className="bg-white/10 text-white/60 border-0 text-[10px]">irreversible</Badge>
+                  )}
+                </div>
+                <p className="text-[11px] text-white/60 mt-0.5">{e.actor} · {e.entity}</p>
+                <p className="text-[10px] text-white/40 mt-0.5">{e.ts}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-white/45 mt-3 px-2">
+          Rolling back replays inverse actions on the knowledge base. Irreversible events require manual remediation.
+        </p>
+      </div>
     </div>
   );
 }
