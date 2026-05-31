@@ -6,9 +6,9 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
-  // Force Nitro on with the Vercel preset so the production build emits the
-  // .vercel/output structure Vercel expects (Node serverless function for SSR
-  // + static assets), instead of the default Cloudflare Workers bundle.
+  // Force Nitro on with the Vercel preset and explicitly restore Vercel's
+  // Build Output API paths. The Lovable config defaults Nitro output to dist/,
+  // which Vercel deploys as an empty/static app and returns NOT_FOUND.
   //
   // We intentionally do NOT override `tanstackStart.server.entry` here:
   // the Cloudflare-style `src/server.ts` wrapper expects a Workers
@@ -16,5 +16,10 @@ export default defineConfig({
   // runtime. The default TanStack Start server entry works on Vercel.
   nitro: {
     preset: "vercel",
+    output: {
+      dir: ".vercel/output",
+      serverDir: ".vercel/output/functions/__server.func",
+      publicDir: ".vercel/output/static",
+    },
   },
 });
