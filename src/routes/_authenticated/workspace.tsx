@@ -787,10 +787,10 @@ function TwinPanel({ channel, role, onOpenSettings }: { channel: Channel; role: 
           <TabsTrigger value="progress" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Progress</TabsTrigger>
           <TabsTrigger value="reports" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Reports</TabsTrigger>
           {role === "manager" && (
-            <TabsTrigger value="company" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Company Progress</TabsTrigger>
+            <TabsTrigger value="company" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Executive Dashboard</TabsTrigger>
           )}
-          {role === "compliance_officer" && (
-            <TabsTrigger value="audit-risk" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Audit &amp; Risk</TabsTrigger>
+          {(role === "compliance_officer" || role === "manager") && (
+            <TabsTrigger value="audit-risk" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70">Audit Trails</TabsTrigger>
           )}
         </TabsList>
 
@@ -914,8 +914,8 @@ function TwinPanel({ channel, role, onOpenSettings }: { channel: Channel; role: 
           </TabsContent>
         )}
 
-        {/* Audit & Risk (compliance only) */}
-        {role === "compliance_officer" && (
+        {/* Audit Trails (compliance + manager) */}
+        {(role === "compliance_officer" || role === "manager") && (
           <TabsContent value="audit-risk" className="flex-1 m-0 overflow-auto">
             <AuditRiskTab />
           </TabsContent>
@@ -1801,25 +1801,105 @@ function CompanyProgressTab() {
     toast.success("PDF exported", { description: "Ready to share with stakeholders." });
   };
 
+  const knowledgeTrend = [42, 58, 71, 65, 88, 102, 118, 134, 151, 168, 192, 214];
+  const deptActivity = COMPANY_PROGRESS.map((d) => ({ name: d.name.split(" ")[0], v: d.progress }));
+  const totalGaps = COMPANY_PROGRESS.reduce((s, d) => s + d.gaps.length, 0);
+  const totalHighlights = COMPANY_PROGRESS.reduce((s, d) => s + d.highlights.length, 0);
+
+  const kpis = [
+    { label: "Overall", value: `${overall}%`, delta: "+6% MoM", good: true },
+    { label: "Departments", value: "4", delta: "all reporting", good: true },
+    { label: "Open gaps", value: String(totalGaps), delta: "−2 this wk", good: true },
+    { label: "Highlights", value: String(totalHighlights), delta: "+5 this wk", good: true },
+  ];
+
   return (
     <div className="p-4 space-y-4">
-      <div className="rounded-lg border border-white/10 bg-gradient-to-br from-amber-500/10 to-rose-500/10 p-3">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-[12px] uppercase tracking-wider text-white/60 font-semibold flex items-center gap-1.5">
-            <Building2 className="size-3.5 text-amber-400" /> SIX Group · company-wide
-          </p>
-          <Button size="sm" onClick={exportPdf} className="h-7 bg-amber-500 hover:bg-amber-400 text-black text-[11px]">
+      {/* Hero */}
+      <div className="rounded-xl border border-white/10 bg-gradient-to-br from-amber-500/15 via-rose-500/10 to-violet-500/15 p-4">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-white/60 font-semibold flex items-center gap-1.5">
+              <Building2 className="size-3.5 text-amber-400" /> SIX Group · executive view
+            </p>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-4xl font-bold tabular-nums">{overall}%</span>
+              <span className="text-[12px] text-white/65">company progress · Q2'26</span>
+            </div>
+          </div>
+          <Button size="sm" onClick={exportPdf} className="h-8 bg-amber-500 hover:bg-amber-400 text-black text-[11px]">
             <FileDown className="size-3.5 mr-1" /> Export PDF
           </Button>
         </div>
-        <div className="flex items-baseline gap-2 mb-1.5">
-          <span className="text-3xl font-bold">{overall}%</span>
-          <span className="text-[11px] text-white/60">average progress · 4 departments</span>
-        </div>
         <Progress value={overall} className="h-1.5" />
+        <div className="grid grid-cols-4 gap-2 mt-3">
+          {kpis.map((k) => (
+            <div key={k.label} className="rounded-md bg-black/25 border border-white/5 p-2">
+              <p className="text-[9px] uppercase tracking-wider text-white/50">{k.label}</p>
+              <p className="text-base font-semibold tabular-nums mt-0.5">{k.value}</p>
+              <p className={`text-[10px] mt-0.5 ${k.good ? "text-emerald-300" : "text-rose-300"}`}>{k.delta}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
+      {/* Charts row */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[11px] uppercase tracking-wider text-white/55 font-semibold mb-2 flex items-center gap-1.5">
+            <TrendingUp className="size-3 text-emerald-400" /> Knowledge growth (12mo)
+          </p>
+          <svg viewBox="0 0 200 60" className="w-full h-16">
+            <defs>
+              <linearGradient id="kgrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgb(251 191 36)" stopOpacity="0.6" />
+                <stop offset="100%" stopColor="rgb(251 191 36)" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            {(() => {
+              const max = Math.max(...knowledgeTrend);
+              const pts = knowledgeTrend.map((v, i) => `${(i / (knowledgeTrend.length - 1)) * 200},${60 - (v / max) * 55}`).join(" ");
+              return (
+                <>
+                  <polyline points={`0,60 ${pts} 200,60`} fill="url(#kgrad)" />
+                  <polyline points={pts} fill="none" stroke="rgb(251 191 36)" strokeWidth="1.5" />
+                </>
+              );
+            })()}
+          </svg>
+          <p className="text-[10px] text-white/50 mt-1">214 cards · +18% MoM</p>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <p className="text-[11px] uppercase tracking-wider text-white/55 font-semibold mb-2 flex items-center gap-1.5">
+            <BarChart3 className="size-3 text-sky-400" /> Department progress
+          </p>
+          <div className="space-y-1.5">
+            {deptActivity.map((d) => (
+              <div key={d.name} className="flex items-center gap-2">
+                <span className="text-[10px] text-white/70 w-14 truncate">{d.name}</span>
+                <div className="flex-1 h-2 bg-white/5 rounded overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-sky-400 to-violet-400" style={{ width: `${d.v}%` }} />
+                </div>
+                <span className="text-[10px] tabular-nums text-white/70 w-8 text-right">{d.v}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* AI summary */}
+      <div className="rounded-lg border border-amber-400/20 bg-gradient-to-br from-amber-500/10 to-transparent p-3">
+        <p className="text-[11px] uppercase tracking-wider text-amber-300 font-semibold mb-1 flex items-center gap-1.5">
+          <Sparkles className="size-3" /> AI executive briefing
+        </p>
+        <p className="text-[12px] text-white/85 leading-relaxed">
+          Securities Services leads MoM capture (+22%) following the T+1 migration. Three SPOF SMEs remain in Digital Assets — recommend prioritising the Markus Fehr handover before 15 July. Open escalations down 30% as Compliance validates new CSDR interpretations.
+        </p>
+      </div>
+
+      {/* Departments */}
       <div className="space-y-3">
+        <p className="text-[11px] uppercase tracking-wider text-white/55 font-semibold">Department breakdown</p>
         {COMPANY_PROGRESS.map((d) => (
           <div key={d.name} className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
             <div className="flex items-start justify-between gap-2 mb-2">
@@ -1827,7 +1907,7 @@ function CompanyProgressTab() {
                 <p className="text-[13px] font-semibold">{d.name}</p>
                 <p className="text-[11px] text-white/55">Lead: {d.lead}</p>
               </div>
-              <span className="text-[12px] font-semibold text-amber-300">{d.progress}%</span>
+              <span className="text-[12px] font-semibold text-amber-300 tabular-nums">{d.progress}%</span>
             </div>
             <Progress value={d.progress} className="h-1 mb-3" />
 
@@ -1888,24 +1968,104 @@ const TIMELINE: TimelineEvent[] = [
 ];
 
 function AuditRiskTab() {
+  const [sevFilter, setSevFilter] = useState<"all" | "high" | "medium" | "low">("all");
+  const [rolledBack, setRolledBack] = useState<Set<number>>(new Set());
+
   const sevColor = (s: LeakRisk["severity"]) =>
     s === "high" ? "bg-rose-500/20 text-rose-300 border-rose-500/30"
     : s === "medium" ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
     : "bg-sky-500/20 text-sky-300 border-sky-500/30";
 
+  const filtered = sevFilter === "all" ? LEAK_RISKS : LEAK_RISKS.filter((r) => r.severity === sevFilter);
+  const counts = {
+    high: LEAK_RISKS.filter((r) => r.severity === "high").length,
+    medium: LEAK_RISKS.filter((r) => r.severity === "medium").length,
+    low: LEAK_RISKS.filter((r) => r.severity === "low").length,
+  };
+  const reversible = TIMELINE.filter((e) => e.reversible).length;
+  const reversiblePct = Math.round((reversible / TIMELINE.length) * 100);
+
+  const rollback = (i: number, action: string) => {
+    setRolledBack((s) => new Set(s).add(i));
+    toast.success("Rolled back", { description: action });
+  };
+
+  const exportCsv = () => {
+    const rows = [["timestamp", "actor", "action", "entity", "reversible"]];
+    TIMELINE.forEach((e) => rows.push([e.ts, e.actor, e.action, e.entity, String(e.reversible)]));
+    const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `audit-trail-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Audit trail exported");
+  };
+
   return (
     <div className="p-4 space-y-4">
-      {/* Leak risks */}
+      {/* Hero KPIs */}
+      <div className="rounded-xl border border-white/10 bg-gradient-to-br from-rose-500/15 via-amber-500/10 to-sky-500/10 p-4">
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-white/60 font-semibold flex items-center gap-1.5">
+              <ShieldCheck className="size-3.5 text-rose-400" /> Compliance · audit trails
+            </p>
+            <p className="text-[12px] text-white/65 mt-1">All knowledge events with rollback &amp; leak-surface analysis.</p>
+          </div>
+          <Button size="sm" onClick={exportCsv} className="h-8 bg-white/10 hover:bg-white/15 text-white text-[11px] border border-white/15">
+            <FileDown className="size-3.5 mr-1" /> Export CSV
+          </Button>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          <div className="rounded-md bg-black/25 border border-white/5 p-2">
+            <p className="text-[9px] uppercase tracking-wider text-white/50">Events (7d)</p>
+            <p className="text-base font-semibold tabular-nums mt-0.5">{TIMELINE.length}</p>
+            <p className="text-[10px] text-white/50 mt-0.5">across 6 actors</p>
+          </div>
+          <div className="rounded-md bg-black/25 border border-white/5 p-2">
+            <p className="text-[9px] uppercase tracking-wider text-white/50">High risks</p>
+            <p className="text-base font-semibold tabular-nums mt-0.5 text-rose-300">{counts.high}</p>
+            <p className="text-[10px] text-rose-300/70 mt-0.5">needs action</p>
+          </div>
+          <div className="rounded-md bg-black/25 border border-white/5 p-2">
+            <p className="text-[9px] uppercase tracking-wider text-white/50">Reversible</p>
+            <p className="text-base font-semibold tabular-nums mt-0.5 text-emerald-300">{reversiblePct}%</p>
+            <p className="text-[10px] text-white/50 mt-0.5">{reversible}/{TIMELINE.length} events</p>
+          </div>
+          <div className="rounded-md bg-black/25 border border-white/5 p-2">
+            <p className="text-[9px] uppercase tracking-wider text-white/50">Rolled back</p>
+            <p className="text-base font-semibold tabular-nums mt-0.5 text-amber-300">{rolledBack.size}</p>
+            <p className="text-[10px] text-white/50 mt-0.5">this session</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Leak risks with filters */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-[12px] uppercase tracking-wider text-white/60 font-semibold flex items-center gap-1.5">
-            <ShieldCheck className="size-3.5 text-rose-400" /> Auditor risk · information leak surfaces
+          <p className="text-[11px] uppercase tracking-wider text-white/55 font-semibold flex items-center gap-1.5">
+            <Shield className="size-3 text-rose-400" /> Information leak surfaces
           </p>
-          <Badge className="bg-rose-500/20 text-rose-300 border-0 text-[10px]">{LEAK_RISKS.filter(r => r.severity === "high").length} high</Badge>
+          <div className="flex gap-1">
+            {(["all", "high", "medium", "low"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setSevFilter(s)}
+                className={`text-[10px] px-2 py-0.5 rounded border capitalize transition ${
+                  sevFilter === s
+                    ? "bg-white/15 border-white/25 text-white"
+                    : "bg-white/[0.03] border-white/10 text-white/55 hover:text-white"
+                }`}
+              >
+                {s}{s !== "all" ? ` (${counts[s]})` : ""}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="space-y-2">
-          {LEAK_RISKS.map((r, i) => (
-            <div key={i} className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          {filtered.map((r, i) => (
+            <div key={i} className="rounded-lg border border-white/10 bg-white/[0.03] p-3 hover:border-white/20 transition">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <p className="text-[13px] font-semibold">{r.area}</p>
                 <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${sevColor(r.severity)}`}>{r.severity.toUpperCase()}</span>
@@ -1916,37 +2076,45 @@ function AuditRiskTab() {
               </p>
             </div>
           ))}
+          {filtered.length === 0 && (
+            <p className="text-[12px] text-white/50 text-center py-6 border border-dashed border-white/10 rounded-lg">No risks at this severity.</p>
+          )}
         </div>
       </div>
 
       {/* Rollback timeline */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-[12px] uppercase tracking-wider text-white/60 font-semibold flex items-center gap-1.5">
-            <GitBranch className="size-3.5 text-sky-400" /> Rollback timeline · current state
+          <p className="text-[11px] uppercase tracking-wider text-white/55 font-semibold flex items-center gap-1.5">
+            <GitBranch className="size-3 text-sky-400" /> Rollback timeline · current state
           </p>
           <span className="text-[10px] text-white/50">latest first</span>
         </div>
         <div className="relative border-l border-white/15 ml-2 pl-4 space-y-3">
-          {TIMELINE.map((e, i) => (
-            <div key={i} className="relative">
-              <span className={`absolute -left-[22px] top-1 size-2.5 rounded-full ring-2 ring-[#1a1d29] ${i === 0 ? "bg-emerald-400" : "bg-white/40"}`} />
-              <div className="rounded border border-white/10 bg-white/[0.03] p-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[12px] font-semibold">{e.action}</p>
-                  {e.reversible ? (
-                    <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] text-amber-300 hover:bg-amber-500/10 hover:text-amber-200">
-                      Roll back
-                    </Button>
-                  ) : (
-                    <Badge className="bg-white/10 text-white/60 border-0 text-[10px]">irreversible</Badge>
-                  )}
+          {TIMELINE.map((e, i) => {
+            const isRolled = rolledBack.has(i);
+            return (
+              <div key={i} className="relative">
+                <span className={`absolute -left-[22px] top-1 size-2.5 rounded-full ring-2 ring-[#1a1d29] ${isRolled ? "bg-amber-400" : i === 0 ? "bg-emerald-400" : "bg-white/40"}`} />
+                <div className={`rounded border p-2.5 transition ${isRolled ? "border-amber-400/30 bg-amber-500/5 opacity-70" : "border-white/10 bg-white/[0.03]"}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className={`text-[12px] font-semibold ${isRolled ? "line-through text-white/60" : ""}`}>{e.action}</p>
+                    {isRolled ? (
+                      <Badge className="bg-amber-500/20 text-amber-300 border-0 text-[10px]">rolled back</Badge>
+                    ) : e.reversible ? (
+                      <Button size="sm" variant="ghost" onClick={() => rollback(i, e.action)} className="h-6 px-2 text-[10px] text-amber-300 hover:bg-amber-500/10 hover:text-amber-200">
+                        Roll back
+                      </Button>
+                    ) : (
+                      <Badge className="bg-white/10 text-white/60 border-0 text-[10px]">irreversible</Badge>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-white/60 mt-0.5">{e.actor} · {e.entity}</p>
+                  <p className="text-[10px] text-white/40 mt-0.5 tabular-nums">{e.ts}</p>
                 </div>
-                <p className="text-[11px] text-white/60 mt-0.5">{e.actor} · {e.entity}</p>
-                <p className="text-[10px] text-white/40 mt-0.5">{e.ts}</p>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <p className="text-[10px] text-white/45 mt-3 px-2">
           Rolling back replays inverse actions on the knowledge base. Irreversible events require manual remediation.
